@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans" version="CE-3.8.1"
+<mule xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd"></mule>
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+    <jms:activemq-connector name="Active_MQ" brokerURL="tcp://localhost:61616" validateConnections="true" clientId="FIRSTSUBSCRIBER" maxRedelivery="1" durable="true" eagerConsumer="true" doc:name="Active MQ"/>
+    <flow name="subscriberFlow">
+        <jms:inbound-endpoint topic="MyLocalTopic" connector-ref="Active_MQ" durableName="FIRST_SUBSCRIBER" doc:name="JMS"/>
+        <logger message="&#8220;FIRST SUBSCRIBER - PAYLOAD FROM MQ #[payload]&#8221;" level="INFO" doc:name="Logger"/>
+    </flow>
+</mule>
