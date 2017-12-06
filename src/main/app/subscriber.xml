@@ -1,22 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:ws="http://www.mulesoft.org/schema/mule/ws" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:spring="http://www.springframework.org/schema/beans" 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
 http://www.mulesoft.org/schema/mule/ws http://www.mulesoft.org/schema/mule/ws/current/mule-ws.xsd
-http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd">
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
     <jms:activemq-connector name="Active_MQ" brokerURL="tcp://localhost:61616" validateConnections="true" clientId="FIRSTSUBSCRIBER" maxRedelivery="1" durable="true" eagerConsumer="true" doc:name="Active MQ"/>
     <ws:consumer-config name="Web_Service_Consumer" wsdlLocation="http://localhost:8080/ws?wsdl" service="CountriesPortService" port="CountriesPortSoap11" serviceAddress="http://Asgard.local:8080/" doc:name="Web Service Consumer"/>
+    <http:request-config name="HTTP_Request_Configuration" host="localhost" port="8084" basePath="countrySvc" doc:name="HTTP Request Configuration"/>
     <flow name="subscriberFlow">
         <jms:inbound-endpoint topic="MyLocalTopic" connector-ref="Active_MQ" durableName="FIRST_SUBSCRIBER" doc:name="JMS"/>
-        <logger message="&#8220;FIRST SUBSCRIBER - PAYLOAD FROM MQ #[payload]&#8221;" level="INFO" doc:name="Logger"/>
+        <logger message="Incoming JMS msg: #[payload]" level="INFO" doc:name="Logger"/>
         <mulexml:xslt-transformer xsl-file="/Users/civilis/Data/BOIP/playground/examples/pubsub/subscriber/src/main/resources/setupCountryRequest.xslt" maxIdleTransformers="2" maxActiveTransformers="5" doc:name="XSLT"/>
-        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
-        <ws:consumer config-ref="Web_Service_Consumer" operation="getCountry" doc:name="Web Service Consumer"/>
-        <mulexml:xslt-transformer xsl-file="/Users/civilis/Data/BOIP/playground/examples/pubsub/subscriber/src/main/resources/CountryResponseTransformer.xslt" maxIdleTransformers="2" maxActiveTransformers="5" doc:name="XSLT"/>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <set-variable variableName="countryName" value="#[payload]" doc:name="Variable"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:query-param paramName="name" value="#[flowVars.countryName]"/>
+            </http:request-builder>
+        </http:request>
+        <json:json-to-object-transformer doc:name="JSON to Object"/>
         <object-to-string-transformer doc:name="Object to String"/>
         <logger message="#[payload]" level="INFO" doc:name="Logger"/>
     </flow>
