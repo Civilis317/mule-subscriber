@@ -12,20 +12,20 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
     <jms:activemq-connector name="Active_MQ" brokerURL="tcp://localhost:61616" validateConnections="true" clientId="FIRSTSUBSCRIBER" maxRedelivery="1" durable="true" eagerConsumer="true" doc:name="Active MQ"/>
     <ws:consumer-config name="Web_Service_Consumer" wsdlLocation="http://localhost:8080/ws?wsdl" service="CountriesPortService" port="CountriesPortSoap11" serviceAddress="http://Asgard.local:8080/" doc:name="Web Service Consumer"/>
-    <http:request-config name="HTTP_Request_Configuration" host="localhost" port="8084" basePath="countrySvc" doc:name="HTTP Request Configuration"/>
+    <http:request-config name="HTTP_Request_Configuration" host="${rest-api-host}" port="${rest-api-port}" basePath="${rest-api-base-path}" doc:name="HTTP Request Configuration"/>
     <flow name="subscriberFlow">
-        <jms:inbound-endpoint topic="MyLocalTopic" connector-ref="Active_MQ" durableName="FIRST_SUBSCRIBER" doc:name="JMS"/>
-        <logger message="Incoming JMS msg: #[payload]" level="INFO" doc:name="Logger"/>
-        <mulexml:xslt-transformer xsl-file="/Users/civilis/Data/BOIP/playground/examples/pubsub/subscriber/src/main/resources/setupCountryRequest.xslt" maxIdleTransformers="2" maxActiveTransformers="5" doc:name="XSLT"/>
+        <jms:inbound-endpoint topic="${mq-topic}" connector-ref="Active_MQ" durableName="FIRST_SUBSCRIBER" doc:name="JMS"/>
+        <logger message="Payload is:  #[System.getProperty('line.separator')] #[payload]" level="INFO" doc:name="Incoming Msg Logger"/>
+        <mulexml:xslt-transformer xsl-file="src/main/resources/setupCountryRequest.xslt" maxIdleTransformers="2" maxActiveTransformers="5" doc:name="XSLT country-name extraction"/>
         <object-to-string-transformer doc:name="Object to String"/>
-        <set-variable variableName="countryName" value="#[payload]" doc:name="Variable"/>
-        <http:request config-ref="HTTP_Request_Configuration" path="/" method="GET" doc:name="HTTP">
+        <set-variable variableName="countryName" value="#[payload]" doc:name="Set flowVar alias for payload (redundant)"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="${rest-api-path}" method="GET" doc:name="HTTP - Perform actual REST call">
             <http:request-builder>
-                <http:query-param paramName="name" value="#[flowVars.countryName]"/>
+                <http:query-param paramName="${rest-api-parameter-name}" value="#[flowVars.countryName]"/>
             </http:request-builder>
         </http:request>
         <json:json-to-object-transformer doc:name="JSON to Object"/>
         <object-to-string-transformer doc:name="Object to String"/>
-        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="Output:  #[System.getProperty('line.separator')] #[payload]" level="INFO" doc:name="JSON Result Logger"/>
     </flow>
 </mule>
